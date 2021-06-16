@@ -52,13 +52,26 @@ namespace ByteBank.Forum.Controllers
 
                 //Alterado o Create por CreateAsync, para que a operação seja assíncrona, foi necessário também adicionar o await na chamada do método,
                 //e na declaração dessa função aqui, adicionamos o async e mudamos o tipo de ActionResult para Task<ActionResult>
-                await UserManager.CreateAsync(novoUsuario, modelo.Senha);
-                //Podemos incluir o usuário
-                return RedirectToAction("Index", "Home");
+                var resultado = await UserManager.CreateAsync(novoUsuario, modelo.Senha);
+                if (resultado.Succeeded)
+                {
+                    //Podemos incluir o usuário
+                    return RedirectToAction("Index", "Home");
+                }
+                else
+                {
+                    AdicionaErros(resultado);
+                }
             }
 
             //Alguma coisa de errado aconteceu!
             return View(modelo);
+        }
+
+        private void AdicionaErros(IdentityResult resultado)
+        {
+            foreach (var erro in resultado.Errors)
+                ModelState.AddModelError("", erro);
         }
     }
 }
