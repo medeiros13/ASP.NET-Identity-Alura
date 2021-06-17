@@ -9,12 +9,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
+using Microsoft.Owin.Security;
 
 namespace ByteBank.Forum.Controllers
 {
     public class ContaController : Controller
     {
-
         private UserManager<UsuarioAplicacao> _userManager;
         public UserManager<UsuarioAplicacao> UserManager
         {
@@ -48,6 +48,15 @@ namespace ByteBank.Forum.Controllers
             set
             {
                 _signInManager = value;
+            }
+        }
+
+        public IAuthenticationManager AuthenticationManager
+        {
+            get
+            {
+                var contextoOwin = Request.GetOwinContext();
+                return contextoOwin.Authentication;
             }
         }
 
@@ -123,6 +132,12 @@ namespace ByteBank.Forum.Controllers
             }
 
             return View();
+        }
+
+        [HttpPost]
+        public ActionResult Logoff()
+        {
+            AuthenticationManager.SignOut(DefaultAuthenticationTypes.ApplicationCookie);
         }
 
         private ActionResult SenhaOuUsuarioInvalidos()
