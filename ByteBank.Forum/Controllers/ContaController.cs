@@ -53,15 +53,17 @@ namespace ByteBank.Forum.Controllers
                 var usuario = await UserManager.FindByEmailAsync(modelo.Email);
                 var usuarioJaExiste = usuario != null;
                 if (usuarioJaExiste)
-                    return RedirectToAction("Index", "Home");
+                    return View("AguardandoConfirmacao");
 
                 //Alterado o Create por CreateAsync, para que a operação seja assíncrona, foi necessário também adicionar o await na chamada do método,
                 //e na declaração dessa função aqui, adicionamos o async e mudamos o tipo de ActionResult para Task<ActionResult>
                 var resultado = await UserManager.CreateAsync(novoUsuario, modelo.Senha);
                 if (resultado.Succeeded)
                 {
-                    //Podemos incluir o usuário
-                    return RedirectToAction("Index", "Home");
+                    //Envia email de confirmação
+                    await EnviarEmailConfirmacaoAsync(novoUsuario);
+
+                    return View("AguardandoConfirmacao");
                 }
                 else
                 {
@@ -71,6 +73,28 @@ namespace ByteBank.Forum.Controllers
 
             //Alguma coisa de errado aconteceu!
             return View(modelo);
+        }
+
+        private async Task EnviarEmailConfirmacaoAsync(UsuarioAplicacao usuario)
+        {
+            var token = await UserManager.GenerateEmailConfirmationTokenAsync(usuario.Id);
+
+            var linkDeCallback =
+                Url.Action(
+                    "ConfirmacaoEmail",
+                    "Conta",
+                    new { usuarioId = usuario.Id, token = token },
+                    Request.Url.Scheme);
+
+            await UserManager.SendEmailAsync(
+                usuario.Id,
+                "Fórum ByteBank - Confirmação de Email",
+                $"Bem vindo ao fórum ByteBank, clique aqui {linkDeCallback} para confirmar seu email!");
+        }
+
+        public ActionResult ConfirmacaoEmail(string usuarioId, string token)
+        {
+            throw new NotImplementedException();
         }
 
         private void AdicionaErros(IdentityResult resultado)
