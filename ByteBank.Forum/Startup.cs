@@ -53,7 +53,13 @@ namespace ByteBank.Forum
                         ObrigatorioUpperCase = true
                     };
 
+                    //Aqui estamos configurando nosso serviço de envio de emails
                     userManager.EmailService = new EmailServico();
+
+                    //Aqui estamos configurando nosso serviço de geração de tokens
+                    var dataProtectionProvider = opcoes.DataProtectionProvider;
+                    var dataProtectionProviderCreated = dataProtectionProvider.Create("ByteBank.Forum");
+                    userManager.UserTokenProvider = new DataProtectorTokenProvider<UsuarioAplicacao>(dataProtectionProviderCreated);
 
                     return userManager;
                 });
