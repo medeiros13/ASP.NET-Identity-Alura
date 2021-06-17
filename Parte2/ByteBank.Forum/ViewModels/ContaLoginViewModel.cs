@@ -11,8 +11,12 @@ namespace ByteBank.Forum.ViewModels
         [Required]
         [EmailAddress]
         public string Email { get; set; }
+        
         [Required]
         [DataType(DataType.Password)]
         public string Senha { get; set; }
+        
+        [Display(Name = "Continuar logado")]
+        public bool ContinuarLogado { get; set; }
     }
 }
