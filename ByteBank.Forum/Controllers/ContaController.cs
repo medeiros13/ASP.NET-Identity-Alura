@@ -50,6 +50,11 @@ namespace ByteBank.Forum.Controllers
                 novoUsuario.UserName = modelo.UserName;
                 novoUsuario.NomeCompleto = modelo.NomeCompleto;
 
+                var usuario = UserManager.FindByEmail(modelo.Email);
+                var usuarioJaExiste = usuario != null;
+                if (usuarioJaExiste)
+                    return RedirectToAction("Index", "Home");
+
                 //Alterado o Create por CreateAsync, para que a operação seja assíncrona, foi necessário também adicionar o await na chamada do método,
                 //e na declaração dessa função aqui, adicionamos o async e mudamos o tipo de ActionResult para Task<ActionResult>
                 var resultado = await UserManager.CreateAsync(novoUsuario, modelo.Senha);
