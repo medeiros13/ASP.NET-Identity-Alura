@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
 using System.Web;
+using ByteBank.Forum.App_Start.Identity;
 
 //Aqui definimos que o tipo que será usado na classe de inicialização do Owin (OwinStartup), será a nossa classe (ByteBank.Forum.Startup)
 [assembly: OwinStartup(typeof(ByteBank.Forum.Startup))]
@@ -43,6 +44,14 @@ namespace ByteBank.Forum
                     userValidator.RequireUniqueEmail = true; //Propriedade que verifica emails duplicados
 
                     userManager.UserValidator = userValidator;
+                    userManager.PasswordValidator = new SenhaValidador()
+                    {
+                        TamanhoRequerido = 6,
+                        ObrigatorioCaracteresEspeciais = true,
+                        ObrigatorioDigitos = true,
+                        ObrigatorioLowerCase = true,
+                        ObrigatorioUpperCase = true
+                    };
 
                     return userManager;
                 });
