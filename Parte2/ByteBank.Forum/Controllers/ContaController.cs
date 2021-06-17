@@ -73,6 +73,22 @@ namespace ByteBank.Forum.Controllers
             return View(modelo);
         }
 
+        public async Task<ActionResult> Login()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<ActionResult> Login(ContaLoginViewModel modelo)
+        {
+            if (ModelState.IsValid)
+            {
+                //Realiza login pelo Identity
+            }
+            //Algo de errado aconteceu
+            return View();
+        }
+
         private async Task EnviarEmailDeConfirmacaoAsync(UsuarioAplicacao usuario)
         {
             var token = await UserManager.GenerateEmailConfirmationTokenAsync(usuario.Id);
