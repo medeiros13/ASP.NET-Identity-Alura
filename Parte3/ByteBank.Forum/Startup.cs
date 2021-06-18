@@ -76,25 +76,21 @@ namespace ByteBank.Forum
                             contextoOwin.Authentication);
 
                     return signInManager;
-                }
-                );
+                });
 
             builder.UseCookieAuthentication(new CookieAuthenticationOptions
-            {
-                AuthenticationType = DefaultAuthenticationTypes.ApplicationCookie
-            });
+                {
+                    AuthenticationType = DefaultAuthenticationTypes.ApplicationCookie
+                });
 
-            builder.UseCookieAuthentication(new CookieAuthenticationOptions
-            {
-                AuthenticationType = DefaultAuthenticationTypes.ExternalCookie
-            });
+            builder.UseExternalSignInCookie(DefaultAuthenticationTypes.ExternalCookie);
 
             builder.UseGoogleAuthentication(new GoogleOAuth2AuthenticationOptions
-            {
-                ClientId = ConfigurationManager.AppSettings["google:client_id"],
-                ClientSecret = ConfigurationManager.AppSettings["google:client_secret"],
-                Caption = "Google"
-            });
+                {
+                    ClientId = ConfigurationManager.AppSettings["google:client_id"],
+                    ClientSecret = ConfigurationManager.AppSettings["google:client_secret"],
+                    Caption = "Google"
+                });
         }
     }
 }
