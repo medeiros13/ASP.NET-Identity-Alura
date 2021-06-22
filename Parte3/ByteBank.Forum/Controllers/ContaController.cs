@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
 using Microsoft.Owin.Security;
+using System.Security.Claims;
 
 namespace ByteBank.Forum.Controllers
 {
@@ -113,148 +114,34 @@ namespace ByteBank.Forum.Controllers
 
         public async Task<ActionResult> RegistrarPorAutenticacaoExternaCallback()
         {
-            var loginInfo = 
+            var loginInfo =
                 await SignInManager.AuthenticationManager.GetExternalLoginInfoAsync();
 
-            return null;
-        }
+            var usuarioExistente = await UserManager.FindByEmailAsync(loginInfo.Email);
 
-        public async Task<ActionResult> Login()
-        {
-            return View();
-        }
+            if (usuarioExistente != null)
+                return View("Error");
 
-        [HttpPost]
-        public async Task<ActionResult> Login(ContaLoginViewModel modelo)
-        {
-            if (ModelState.IsValid)
+            var novoUsuario = new UsuarioAplicacao();
+
+            novoUsuario.Email = loginInfo.Email;
+            novoUsuario.UserName = loginInfo.Email;
+            novoUsuario.NomeCompleto =
+                loginInfo.ExternalIdentity.FindFirstValue(
+                        loginInfo.ExternalIdentity.NameClaimType
+                    );
+
+            var resultado = await UserManager.CreateAsync(novoUsuario);
+            if (resultado.Succeeded)
             {
-                var usuario = await UserManager.FindByEmailAsync(modelo.Email);
-
-                if (usuario == null)
-                    return SenhaOuUsuarioInvalidos();
-
-                var signInResultado =
-                    await SignInManager.PasswordSignInAsync(
-                            usuario.UserName,
-                            modelo.Senha,
-                            isPersistent: modelo.ContinuarLogado,
-                            shouldLockout: true);
-
-                switch (signInResultado)
-                {
-                    case SignInStatus.Success:
-                        if (!usuario.EmailConfirmed)
-                        {
-                            AuthenticationManager.SignOut(DefaultAuthenticationTypes.ApplicationCookie);
-                            return View("AguardandoConfirmacao");
-                        }
-                        return RedirectToAction("Index", "Home");
-                    case SignInStatus.LockedOut:
-
-                        var senhaCorreta =
-                            await UserManager.CheckPasswordAsync(
-                                usuario,
-                                modelo.Senha);
-
-                        if (senhaCorreta)
-                            ModelState.AddModelError("", "A conta está bloqueada!");
-                        else
-                            return SenhaOuUsuarioInvalidos();
-
-                        break;
-                    default:
-                        return SenhaOuUsuarioInvalidos();
-                }
-            }
-
-            return View();
-        }
-
-        [HttpGet]
-        public ActionResult EsqueciSenha()
-        {
-            return View();
-        }
-
-        [HttpPost]
-        public async Task<ActionResult> EsqueciSenha(ContaEsqueciSenhaViewModel modelo)
-        {
-            if (ModelState.IsValid)
-            {
-                // Gerar o token de reset da senha
-                // Gerar a URL para o usuário
-                // Vamos enviar esse email
-                var usuario =
-                    await UserManager.FindByEmailAsync(modelo.Email);
-
-                if (usuario != null)
-                {
-                    var token =
-                        await UserManager.GeneratePasswordResetTokenAsync(usuario.Id);
-
-                    var linkDeCallback = Url.Action(
-                        "ConfirmacaoAlteracaoSenha",
-                        "Conta",
-                        new { usuarioId = usuario.Id, token = token },
-                        Request.Url.Scheme);
-
-                    await UserManager.SendEmailAsync(
-                        usuario.Id,
-                        "Fórum ByteBank - Alteração de senha",
-                        $"Clique aqui {linkDeCallback} para alterar sua senha!");
-                }
-
-                return View("EmailAlteracaoSenhaEnviado");
-            }
-            return View();
-        }
-
-        public ActionResult ConfirmacaoAlteracaoSenha(string usuarioId, string token)
-        {
-            var modelo = new ContaConfirmacaoAlteracaoSenhaViewModel()
-            {
-                UsuarioId = usuarioId,
-                Token = token
-            };
-
-            return View(modelo);
-        }
-
-        [HttpPost]
-        public async Task<ActionResult> ConfirmacaoAlteracaoSenha(ContaConfirmacaoAlteracaoSenhaViewModel modelo)
-        {
-            if (ModelState.IsValid)
-            {
-                // Verifica o token recebido
-                // Verifica o Id do Usuário
-                // Mudar a senha
-                var resultadoAlteracao =
-                    await UserManager.ResetPasswordAsync(
-                        modelo.UsuarioId,
-                        modelo.Token,
-                        modelo.NovaSenha);
-
-                if (resultadoAlteracao.Succeeded)
-                {
+                var resultadoAddLoginInfo =
+                    await UserManager.AddLoginAsync(novoUsuario.Id, loginInfo.Login);
+                
+                if (resultadoAddLoginInfo.Succeeded)
                     return RedirectToAction("Index", "Home");
-                }
-                AdicionaErros(resultadoAlteracao);
             }
-            return View();
-        }
 
-        [HttpPost]
-        public ActionResult Logoff()
-        {
-            AuthenticationManager.SignOut(DefaultAuthenticationTypes.ApplicationCookie);
-            return RedirectToAction("Index", "Home");
-        }
-
-        private ActionResult SenhaOuUsuarioInvalidos()
-        {
-            ModelState.AddModelError("", "Credenciais inválidas!");
-            return View("Login");
+            return View("Error");
         }
 
         private async Task EnviarEmailDeConfirmacaoAsync(UsuarioAplicacao usuario)
@@ -285,6 +172,147 @@ namespace ByteBank.Forum.Controllers
                 return RedirectToAction("Index", "Home");
             else
                 return View("Error");
+        }
+
+        public async Task<ActionResult> Login()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<ActionResult> Login(ContaLoginViewModel modelo)
+        {
+            if (ModelState.IsValid)
+            {
+                var usuario = await UserManager.FindByEmailAsync(modelo.Email);
+
+                if (usuario == null)
+                    return SenhaOuUsuarioInvalidos();
+
+                var signInResultado =
+                    await SignInManager.PasswordSignInAsync(
+                        usuario.UserName,
+                        modelo.Senha,
+                        isPersistent: modelo.ContinuarLogado,
+                        shouldLockout: true);
+
+                switch (signInResultado)
+                {
+                    case SignInStatus.Success:
+
+                        if (!usuario.EmailConfirmed)
+                        {
+                            AuthenticationManager.SignOut(DefaultAuthenticationTypes.ApplicationCookie);
+                            return View("AguardandoConfirmacao");
+                        }
+
+                        return RedirectToAction("Index", "Home");
+                    case SignInStatus.LockedOut:
+                        var senhaCorreta =
+                            await UserManager.CheckPasswordAsync(
+                                usuario,
+                                modelo.Senha);
+
+                        if (senhaCorreta)
+                            ModelState.AddModelError("", "A conta está bloqueada!");
+                        else
+                            return SenhaOuUsuarioInvalidos();
+                        break;
+                    default:
+                        return SenhaOuUsuarioInvalidos();
+                }
+            }
+
+            // Algo de errado aconteceu
+            return View(modelo);
+        }
+
+        public ActionResult EsqueciSenha()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<ActionResult> EsqueciSenha(ContaEsqueciSenhaViewModel modelo)
+        {
+            if (ModelState.IsValid)
+            {
+                // Gerar o token de reset da senha
+                // Gerar a url para o usuário
+                // Vamos enviar esse email
+
+                var usuario = await UserManager.FindByEmailAsync(modelo.Email);
+
+                if (usuario != null)
+                {
+                    var token =
+                        await UserManager.GeneratePasswordResetTokenAsync(usuario.Id);
+
+                    var linkDeCallback =
+                        Url.Action(
+                            "ConfirmacaoAlteracaoSenha",
+                            "Conta",
+                            new { usuarioId = usuario.Id, token = token },
+                            Request.Url.Scheme);
+
+                    await UserManager.SendEmailAsync(
+                        usuario.Id,
+                        "Fórum ByteBank - Alteração de senha",
+                        $"Clique aqui {linkDeCallback} alterar a sua senha!");
+                }
+
+                return View("EmailAlteracaoSenhaEnviado");
+            }
+
+            return View();
+        }
+
+        public ActionResult ConfirmacaoAlteracaoSenha(string usuarioId, string token)
+        {
+            var modelo = new ContaConfirmacaoAlteracaoSenhaViewModel
+            {
+                UsuarioId = usuarioId,
+                Token = token
+            };
+
+            return View(modelo);
+        }
+
+        [HttpPost]
+        public async Task<ActionResult> ConfirmacaoAlteracaoSenha(ContaConfirmacaoAlteracaoSenhaViewModel modelo)
+        {
+            if (ModelState.IsValid)
+            {
+                // Verifica o Token recebido
+                // Verifica o ID do usuário
+                // Mudar a senha
+                var resultadoAlteracao =
+                    await UserManager.ResetPasswordAsync(
+                        modelo.UsuarioId,
+                        modelo.Token,
+                        modelo.NovaSenha);
+
+                if (resultadoAlteracao.Succeeded)
+                {
+                    return RedirectToAction("Index", "Home");
+                }
+                AdicionaErros(resultadoAlteracao);
+            }
+
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult Logoff()
+        {
+            AuthenticationManager.SignOut(DefaultAuthenticationTypes.ApplicationCookie);
+            return RedirectToAction("Index", "Home");
+        }
+
+        private ActionResult SenhaOuUsuarioInvalidos()
+        {
+            ModelState.AddModelError("", "Credenciais inválidas!");
+            return View("Login");
         }
 
         private void AdicionaErros(IdentityResult resultado)
